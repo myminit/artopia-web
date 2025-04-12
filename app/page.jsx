@@ -1,10 +1,13 @@
+"use client";
+
 import Image from "next/image";
+import { EllipsisHorizontalIcon } from "@heroicons/react/24/solid";
 import Navbar from "../components/Navbar";
-import HeadLogo from "../components/HeadLogo"; 
+import HeadLogo from "../components/HeadLogo";
 
 export default function Home() {
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen">
       {/* HeadLogo ด้านบน */}
       <div className="fixed top-0 left-0 w-full h-[70px] bg-white shadow z-50">
         <HeadLogo />
@@ -25,6 +28,7 @@ export default function Home() {
               alt="Artopia Banner"
               width={1100}
               height={100}
+              priority
               className="w-full h-auto object-cover"
             />
           </div>
@@ -34,24 +38,18 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-black mb-4">Gallery</h2>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
+              {[...Array(8)].map((_, index) => (
                 <div
-                  key={i}
+                  key={index}
                   className="relative bg-white border rounded-lg shadow-md p-2 hover:shadow-lg transition"
                 >
                   {/* Three Dots Button */}
                   <div className="absolute top-2 right-2">
-                    <button className="text-gray-500 hover:text-black">
-                      <svg
-                        width="20"
-                        height="20"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle cx="5" cy="12" r="2" />
-                        <circle cx="12" cy="12" r="2" />
-                        <circle cx="19" cy="12" r="2" />
-                      </svg>
+                    <button
+                      aria-label="More options"
+                      className="text-black hover:text-gray-700"
+                    >
+                      <EllipsisHorizontalIcon className="w-5 h-5" />
                     </button>
                   </div>
 

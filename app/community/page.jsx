@@ -1,0 +1,72 @@
+import Image from "next/image";
+import { HeartIcon } from "@heroicons/react/24/outline";
+import Navbar from "../../components/Navbar";
+import HeadLogo from "../../components/HeadLogo";
+
+export default function Community() {
+  return (
+    <div className="min-h-screen">
+      {/* HeadLogo ด้านบน */}
+      <div className="fixed top-0 left-0 w-full h-[70px] bg-white shadow z-50">
+        <HeadLogo />
+      </div>
+
+      <div className="flex pt-[70px] h-screen">
+        {/* Navbar ด้านซ้าย */}
+        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-sky-400 z-40 shadow">
+          <Navbar />
+        </div>
+
+        {/* Main Content */}
+        <main className="ml-72 flex-1 overflow-y-auto px-6 py-4 bg-white">
+          {/* Post Section */}
+          <div className="py-2">
+            <h2 className="text-4xl font-bold text-black mb-4">Community</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 py-2 gap-6">
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={i}
+                  className="relative bg-white border rounded-lg shadow-md p-2 hover:shadow-lg transition"
+                >
+                  {/* Info */}
+                  <div className="flex items-center space-x-2">
+                    <Image
+                      src="/img/user.png"
+                      alt="User Profile"
+                      width={30}
+                      height={30}
+                      priority
+                      className="rounded-full"
+                    />
+                    <span className="text-black text-base font-medium">
+                      Scarlett
+                    </span>
+                  </div>
+
+                  <p className="text-sm font-medium mt-2 text-black">
+                    about cat
+                  </p>
+
+                  {/* Heart Icon Button */}
+                  <div className="absolute top-2 right-2">
+                    <button
+                      aria-label="Like post"
+                      className="text-black hover:text-red-500 transition-colors"
+                    >
+                      <HeartIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Image Placeholder */}
+                  <div className="w-full h-36 bg-gray-100 rounded-md flex items-center justify-center">
+                    <span className="text-gray-400">Artwork</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
