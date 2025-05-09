@@ -1,14 +1,18 @@
-import logo from "/public/img/logo.png";
-import user from "/public/img/user.png";
+
 import Image from "next/image";
-import Link from "next/link";
+
 
 export default function HeadLogo() {
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-sky-400 shadow-sm">
       {/* Logo + Title */}
       <div className="flex items-center space-x-2">
-        <Image src="/img/logo.png" alt="Artopia Logo" width={40} height={40} />
+        <Image
+          src="/img/logo.png"
+          alt="Artopia Logo"
+          width={40}
+          height={40}
+        />
         <h1 className="text-white text-3xl px-4 font-bold">Artopia</h1>
       </div>
 
@@ -40,13 +44,13 @@ export default function HeadLogo() {
       {/* User Profile */}
       <div className="flex items-center space-x-2 ">
         <Image
-          src="/img/user.png"
+          src="/img/tin.png"
           alt="User Profile"
           width={32}
           height={32}
           className="rounded-full"
         />
-        <span className="text-black text-xl font-medium px-4 ">Scarlett</span>
+        <span className="text-black text-xl font-medium px-4 ">TINNY</span>
       </div>
     </header>
   );
