@@ -80,7 +80,7 @@ const Toolbar: React.FC<Props> = ({
             key={t}
             onClick={() => setTool(t)}
             className={`p-2 rounded text-sm ${
-              tool === t ? 'bg-blue-500 text-white' : 'bg-gray-100'
+              tool === t ? 'bg-sky-500  text-white' : 'bg-gray-100 hover:bg-sky-200'
             }`}
           >
             {t === TOOL_TYPE.RECT ? 'RECTANGLE' : t}
@@ -88,16 +88,25 @@ const Toolbar: React.FC<Props> = ({
         ))}
       </div>
 
-      <div>
-        <label className="text-xs font-semibold">ขนาดแปรง</label>
+      <div className="mb-6">
+        <label
+          htmlFor="brush-size"
+          className="flex items-center space-x-2 text-gray-700 font-semibold mb-2 select-none"
+        >
+  
+          <span>ขนาดแปรง</span>
+        </label>
         <input
-          type="number"
+          id="brush-size"
+          type="range"
           min={1}
           max={100}
           value={brushSize}
           onChange={(e) => setBrushSize(Number(e.target.value))}
-          className="w-full border px-2 py-1 rounded"
+          className="w-full h-2 bg-gray-200 rounded-lg cursor-pointer appearance-none
+            accent-blue-500"
         />
+        <div className="text-right text-sm text-gray-600 mt-1">{brushSize}px</div>
       </div>
 
       <div className="pt-2">
