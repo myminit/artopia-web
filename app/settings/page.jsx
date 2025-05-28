@@ -5,7 +5,7 @@ import Image from "next/image";
 import { CameraIcon } from "@heroicons/react/24/outline";
 import Navbar from "@/components/Navbar";
 import HeadLogo from "@/components/HeadLogo";
-import { useAuth } from "@/context/AuthContext"; 
+import { useAuth } from "@/context/AuthContext";
 
 export default function AccountSetting() {
   const [profileImage, setProfileImage] = useState("/default-profile.jpg");
@@ -16,7 +16,7 @@ export default function AccountSetting() {
     newPassword: "",
     confirmPassword: "",
     bio: "",
-  });  
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -35,8 +35,7 @@ export default function AccountSetting() {
       setProfileImage(user.avatar || "/default-profile.jpg");
     }
   };
-  
-  
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -57,7 +56,6 @@ export default function AccountSetting() {
       setProfileImage(user.avatar || "/default-profile.jpg");
     }
   }, [user]);
-  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,7 +75,7 @@ export default function AccountSetting() {
       console.error(err);
     }
   };
-  
+
   return (
     <div className="min-h-screen">
       {/* HeadLogo ด้านบน */}

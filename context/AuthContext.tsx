@@ -6,8 +6,9 @@ interface User {
   id: string;
   name: string;
   email: string;
+  bio: string;
   role: string;
-  avatar?: string; // เพิ่มถ้าต้องการ
+  avatar?: string; 
 }
 
 interface AuthContextType {
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   
 });
+
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);

@@ -10,6 +10,8 @@ export interface IUser extends Document {
   resetPasswordOTPExpires: Date | null;
   verificationOTP: string | null;
   verificationOTPExpires: Date | null;
+  bio?: string; 
+  avatar?: string; 
 }
 
 const UserSchema = new Schema<IUser>({
@@ -22,8 +24,10 @@ const UserSchema = new Schema<IUser>({
   resetPasswordOTPExpires: { type: Date, default: null },
   verificationOTP: { type: String, default: null },
   verificationOTPExpires: { type: Date, default: null },
+  bio: { type: String, default: '' },
+  avatar: { type: String, default: '' },
 }, { timestamps: true });
 
-const User = models.User as mongoose.Model<IUser> || model<IUser>('User', UserSchema);
+const User = models.User || model<IUser>('User', UserSchema);
 
 export default User;
