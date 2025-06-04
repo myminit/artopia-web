@@ -1,82 +1,67 @@
 // File: app/api/community/[postid]/comment/[commentid]/report/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/config/db';
-import CommunityPost from '@/models/CommunityPost';
-import { getUserFromReq } from '@/utils/auth';
+import { NextRequest } from "next/server";
+import connectDB from "@/config/db";
+import Report from "@/models/Report";
+import CommunityPost from "@/models/CommunityPost";
+import User from "@/models/User";
+import { verifyToken } from "@/utils/auth";
 
-export async function POST(request: NextRequest) {
-  // ดึง postid และ commentid จาก pathname
-  const pathname = request.nextUrl.pathname;
-  const parts = pathname.split('/');
-  const postid = parts[3];     // ['', 'api', 'community', 'postid', 'comment', 'commentid', 'report']
-  const commentid = parts[5];
-
-  if (!postid || !commentid) {
-    return NextResponse.json({ error: 'Missing postid or commentid' }, { status: 400 });
-  }
-
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { postid: string; commentid: string } }
+) {
   try {
-    // 2. ตรวจสอบ token & ดึง userId
-    const userPayload = await getUserFromReq(request);
-    if (!userPayload) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const uid = userPayload.id;
-
-    // 3. อ่าน body → { reason: string, detail?: string }
-    const body = await request.json();
-    const { reason, detail } = body;
-    if (!reason || typeof reason !== 'string') {
-      return NextResponse.json({ error: 'Missing reason' }, { status: 400 });
-    }
-    const reasonTrim = reason.trim();
-    const detailTrim = typeof detail === 'string' ? detail.trim() : '';
-
-    // 4. ต่อ DB และหาโพสต์
     await connectDB();
-    const post = await CommunityPost.findById(postid);
+
+    const token = req.cookies.get("token")?.value || "";
+    const payload = verifyToken(token);
+    if (!payload) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    const { reason, detail, reportUserId } = await req.json();
+
+    if (!reason || !reportUserId) {
+      return new Response("Missing required fields", { status: 400 });
+    }
+
+    const post = await CommunityPost.findById(params.postid);
     if (!post) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+      return new Response("Post not found", { status: 404 });
     }
 
-    // 5A. หา comment (level-1) ก่อน
-    let targetComment: any = post.comments.find((c: any) => c._id === commentid);
-
-    // 5B. ถ้าไม่เจอ → หาใน replies (level-2)
-    if (!targetComment) {
-      for (const c of post.comments) {
-        const foundInReply = (c.replies || []).find((r: any) => r._id === commentid);
-        if (foundInReply) {
-          targetComment = foundInReply;
-          break;
-        }
-      }
+    const comment = post.comments.id(params.commentid);
+    if (!comment) {
+      return new Response("Comment not found", { status: 404 });
     }
 
-    if (!targetComment) {
-      return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
-    }
+    // Get user name from database
+    const user = await User.findById(payload._id);
+    const userName = user?.name || "Unknown User";
 
-    // 6. สร้าง object report สำหรับ comment/reply แล้ว push ลงใน targetComment.reports
-    const reportObj = {
-      _id:       new Date().getTime().toString(),
-      userId:    uid,
-      reason:    reasonTrim,
-      detail:    detailTrim,
+    const report = await Report.create({
+      byUserId: payload._id,
+      reportUserId,
+      reason,
+      detail: detail || "",
+      postId: params.postid,
+      commentId: params.commentid
+    });
+
+    comment.reports.push({
+      _id: report._id.toString(),
+      userId: payload._id,
+      userName: userName,
+      reason,
+      detail: detail || "",
       createdAt: new Date()
-    };
-    targetComment.reports.push(reportObj);
+    });
 
-    // 7. บันทึกลง DB
     await post.save();
 
-    // 8. ตอบกลับ report object พร้อม status 201
-    return NextResponse.json(reportObj, { status: 201 });
-  } catch (err) {
-    console.error(
-      'Error in POST /api/community/[postid]/comment/[commentid]/report:',
-      err
-    );
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return Response.json(report);
+  } catch (error) {
+    console.error("Error creating comment report:", error);
+    return new Response("Internal Server Error", { status: 500 });
   }
 }

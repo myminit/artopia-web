@@ -246,6 +246,7 @@ export default function PostDetailPage() {
         body: JSON.stringify({
           reason: reportReason,
           detail: reportDetail,
+          reportUserId: post.userId
         }),
       });
       setShowReportModal(false);

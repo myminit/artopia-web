@@ -81,13 +81,19 @@ export default function CommunityFeed() {
       return;
     }
     try {
+      const post = posts.find(p => p._id === reportPostId);
+      if (!post) {
+        throw new Error('Post not found');
+      }
+      
       await fetch(`/api/community/${reportPostId}/report`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reason: reportReason,
-          detail: reportDetail
+          detail: reportDetail,
+          reportUserId: post.userId
         })
       });
       setShowReportModal(false);

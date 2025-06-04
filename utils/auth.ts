@@ -2,12 +2,14 @@
 
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
-import { IUser } from '@/models/User'; // ถ้าไม่มี ก็ลบบรรทัดนี้ออกได้
 
-const JWT_SECRET = process.env.JWT_SECRET!;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export interface TokenPayload {
-  id:   string;
+  _id: string;
+  id?: string;
+  name: string;
+  email: string;
   role: string;
 }
 
@@ -20,60 +22,42 @@ export function signToken(
 }
 
 // ── 2. ฟังก์ชันตรวจสอบ JWT ───────────────────────────────────────────────
-export function verifyToken(token: string): TokenPayload {
+export function verifyToken(token: string): TokenPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    if (
-      decoded &&
-      typeof decoded === 'object' &&
-      'id' in decoded &&
-      'role' in decoded
-    ) {
-      return decoded as TokenPayload;
-    }
-    throw new Error('Invalid token payload');
-  } catch (err) {
-    throw new Error('Invalid or expired token');
+    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
   }
 }
 
-// ── 3. ฟังก์ชันดึง token จาก cookie ─────────────────────────────────────────
+// ── 3. ฟังก์ชันดึง token จาก request ────────────────────────────────────────
 export function getTokenFromReq(req: NextRequest): string | null {
-  // req.cookies เป็น CookiesStore ของ NextRequest
-  // แต่ NextRequest.cookies.get('token') จะคืน { name, value } | undefined
-  const cookieStore = req.cookies.get('token');
-  if (!cookieStore) return null;
-  return cookieStore.value;
+  const token = req.cookies.get('token')?.value;
+  if (!token) return null;
+  return token;
 }
 
 // ── 4. ฟังก์ชันดึง user จาก request ────────────────────────────────────────
 export async function getUserFromReq(req: NextRequest): Promise<TokenPayload | null> {
-  // สมมติว่า JWT เราเก็บไว้ใน cookie ชื่อ "token"
-  const token = req.cookies.get('token')?.value;
-  if (!token) return null;
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    // ตรวจว่า decoded มี shape เป็น TokenPayload หรือไม่
-    if (
-      decoded &&
-      typeof decoded === 'object' &&
-      'id' in decoded &&
-      'role' in decoded
-    ) {
-      return decoded as TokenPayload;
-    }
-    return null;
-  } catch (err) {
-    console.error('JWT verify error:', err);
+    const token = getTokenFromReq(req);
+    if (!token) return null;
+
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    return decoded;
+  } catch (error) {
+    console.error('Auth error:', error);
     return null;
   }
 }
 
 // ── 5. ฟังก์ชันตรวจสอบ role (ถ้ามี) ────────────────────────────────────────
-export function isAdmin(user: IUser | TokenPayload) {
+export function isAdmin(user: TokenPayload) {
   return user.role === 'admin';
 }
-export function isUser(user: IUser | TokenPayload) {
+
+export function isUser(user: TokenPayload) {
   return user.role === 'user';
 }
 
@@ -84,14 +68,12 @@ export interface Session {
 export async function getSession(req: NextRequest): Promise<Session | null> {
   try {
     const token = getTokenFromReq(req);
-    if (!token) {
-      return null;
-    }
+    if (!token) return null;
 
     const decoded = verifyToken(token);
-    return {
-      user: decoded
-    };
+    if (!decoded) return null;
+    
+    return { user: decoded };
   } catch (error) {
     return null;
   }

@@ -3,6 +3,7 @@ import connectDB from '@/config/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 import { signToken } from '@/utils/auth'
+
 export async function POST(req: NextRequest) {
   await connectDB();
   const { email, password } = await req.json();
@@ -24,8 +25,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized role' }, { status: 403 });
     }
 
-    const token = signToken({ id: user._id.toString(), role: user.role });
-    console.log("login token payload:", { id: user._id.toString(), role: user.role }); // เพิ่มบรรทัดนี้
+    const token = signToken({ 
+      _id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
+    
+    console.log("login token payload:", { 
+      _id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
     console.log("LOGIN: token created =", token);
 
     const response = NextResponse.json({

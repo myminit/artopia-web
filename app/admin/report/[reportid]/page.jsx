@@ -8,25 +8,13 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 
-
 export default function AdminReportid() {
   const params = useParams();
   const reportId = params.reportid;
   const router = useRouter();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
-  /*const [report] = useState({
-    id: reportId,
-    byUserId: 1,
-    reportUserId: 1,
-    lastUpdate: "24 Jun 2025",
-    reason: "",
-    detail: "",
-  });
 
-  const handleDelete = () => {
-    console.log("Deleting report:", report.id);
-  };*/
   useEffect(() => {
     async function fetchReport() {
       try {
@@ -72,7 +60,35 @@ export default function AdminReportid() {
     }
   };
 
-  if (!report) return <p>ไม่พบรายงาน</p>;
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <AdminHeadLogo />
+        <div className="flex pt-[70px]">
+          <aside className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-purple-400 z-40 shadow-lg">
+            <AdminNavbar />
+          </aside>
+          <main className="ml-72 flex-1 flex items-center justify-center">
+            <p className="text-gray-500">Loading...</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!report) return (
+    <div className="min-h-screen">
+      <AdminHeadLogo />
+      <div className="flex pt-[70px]">
+        <aside className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-purple-400 z-40 shadow-lg">
+          <AdminNavbar />
+        </aside>
+        <main className="ml-72 flex-1 flex items-center justify-center">
+          <p className="text-gray-500">ไม่พบรายงาน</p>
+        </main>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -83,7 +99,7 @@ export default function AdminReportid() {
 
       <div className="flex pt-[70px] h-screen">
         {/* Sidebar */}
-        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-sky-400 z-40 shadow">
+        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-purple-400 z-40 shadow">
           <AdminNavbar />
         </div>
 
@@ -100,30 +116,56 @@ export default function AdminReportid() {
           </h1>
 
           <div className="bg-white rounded-xl p-6 shadow">
-            <p>
+            <p className="mb-4">
               <span className="inline-block min-w-[150px] text-gray-500">
                 Report ID
               </span>
-              {report.id}
+              {report._id}
             </p>
-            <p>
+            <p className="mb-4">
               <span className="inline-block min-w-[150px] text-gray-500">
                 By User ID
               </span>
-              {report.byUserId}
+              <button
+                onClick={() => router.push(`/admin/user/${report.byUserId}`)}
+                className="text-blue-500 hover:underline"
+              >
+                {report.byUserId}
+              </button>
             </p>
-            <p>
+            <p className="mb-4">
               <span className="inline-block min-w-[150px] text-gray-500">
                 Report User ID
               </span>
-              {report.reportUserId}
+              <button
+                onClick={() => router.push(`/admin/user/${report.reportUserId}`)}
+                className="text-blue-500 hover:underline"
+              >
+                {report.reportUserId}
+              </button>
             </p>
-            <p>
+            <p className="mb-4">
               <span className="inline-block min-w-[150px] text-gray-500">
-                Last Update
+                Created At
               </span>
-              {report.lastUpdate}
+              {new Date(report.createdAt).toLocaleString()}
             </p>
+            {report.postId && (
+              <p className="mb-4">
+                <span className="inline-block min-w-[150px] text-gray-500">
+                  Post ID
+                </span>
+                {report.postId}
+              </p>
+            )}
+            {report.commentId && (
+              <p className="mb-4">
+                <span className="inline-block min-w-[150px] text-gray-500">
+                  Comment ID
+                </span>
+                {report.commentId}
+              </p>
+            )}
 
             <div className="mt-4">
               <label className="block mb-1 text-sm text-gray-700">

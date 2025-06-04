@@ -15,65 +15,104 @@ export default function Adminuserid() {
     const userId = params.userid;
     const router = useRouter();
     const [user, setUser] = useState(null);
-    const [banUntil, setBanUntil] = useState("");
     const [loading, setLoading] = useState(true);
+    const [reports, setReports] = useState([]);
 
-  const [reports, setReports] = useState([]);
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await fetch(`/api/admin/user/${userId}`, {
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("โหลดข้อมูลผู้ใช้ล้มเหลว");
-
-        const data = await res.json();
-        setUser(data);
-        setBanUntil(data.banUntil ? data.banUntil.slice(0, 10) : ""); // format YYYY-MM-DD
-      } catch (err) {
-        console.error(err);
-        alert("ไม่สามารถโหลดข้อมูลได้");
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchUser();
+    fetchReports();
   }, [userId]);
 
-  const handleBanUpdate = async () => {
+  const fetchUser = async () => {
     try {
-      const res = await fetch(`/api/admin/user/${userid}`, {
+      const res = await fetch(`/api/admin/user/${userId}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("โหลดข้อมูลผู้ใช้ล้มเหลว");
+
+      const data = await res.json();
+      setUser(data);
+    } catch (err) {
+      console.error(err);
+      alert("ไม่สามารถโหลดข้อมูลได้");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      const res = await fetch(`/api/admin/user/${userId}/reports`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("โหลดข้อมูลรายงานล้มเหลว");
+
+      const data = await res.json();
+      setReports(data);
+    } catch (err) {
+      console.error(err);
+      // Don't show alert for reports loading failure
+    }
+  };
+
+  const handleBan = async () => {
+    if (!confirm("ต้องการแบนผู้ใช้นี้ใช่หรือไม่?")) return;
+
+    try {
+      const res = await fetch(`/api/admin/user/${userId}`, {
         method: "PUT",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          isBanned: true,
-          banUntil: banUntil ? new Date(banUntil).toISOString() : null,
+          status: 'banned',
+          banUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days
         }),
       });
 
-      if (!res.ok) throw new Error("อัปเดตข้อมูลล้มเหลว");
+      if (!res.ok) throw new Error("แบนผู้ใช้ล้มเหลว");
 
-      const updated = await res.json();
-      setUser(updated);
-      alert("บันทึกการแบนแล้ว");
+      await fetchUser(); // รีโหลดข้อมูลผู้ใช้
+      alert("แบนผู้ใช้เรียบร้อยแล้ว");
     } catch (err) {
       console.error(err);
-      alert("บันทึกไม่สำเร็จ");
+      alert("แบนผู้ใช้ไม่สำเร็จ");
+    }
+  };
+
+  const handleUnban = async () => {
+    if (!confirm("ต้องการยกเลิกการแบนผู้ใช้นี้ใช่หรือไม่?")) return;
+
+    try {
+      const res = await fetch(`/api/admin/user/${userId}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: 'active',
+          banUntil: null
+        }),
+      });
+
+      if (!res.ok) throw new Error("ยกเลิกการแบนล้มเหลว");
+
+      await fetchUser(); // รีโหลดข้อมูลผู้ใช้
+      alert("ยกเลิกการแบนเรียบร้อยแล้ว");
+    } catch (err) {
+      console.error(err);
+      alert("ยกเลิกการแบนไม่สำเร็จ");
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm("ลบผู้ใช้นี้จริงหรือไม่?")) return;
+    if (!confirm("ต้องการลบผู้ใช้นี้จริงหรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) return;
 
     try {
-      const res = await fetch(`/api/admin/user/${userid}`, {
+      const res = await fetch(`/api/admin/user/${userId}`, {
         method: "DELETE",
         credentials: "include",
       });
 
-      if (!res.ok) throw new Error("ลบไม่สำเร็จ");
+      if (!res.ok) throw new Error("ลบผู้ใช้ล้มเหลว");
 
       alert("ลบผู้ใช้เรียบร้อยแล้ว");
       router.push("/admin/user");
@@ -82,7 +121,27 @@ export default function Adminuserid() {
       alert("ลบผู้ใช้ไม่สำเร็จ");
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        <div className="fixed top-0 left-0 w-full h-[70px] bg-white shadow z-50">
+          <AdminHeadLogo />
+        </div>
+        <div className="flex pt-[70px] h-screen">
+          <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-sky-400 z-40 shadow">
+            <AdminNavbar />
+          </div>
+          <div className="ml-72 p-6 w-full flex items-center justify-center">
+            <p>กำลังโหลด...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) return <p>ไม่พบผู้ใช้</p>;
+  
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
@@ -132,20 +191,26 @@ export default function Adminuserid() {
                   <span className="inline-block min-w-[120px] text-gray-400">
                     Last Update:
                   </span>
-                  {user.updatedAt}
+                  {new Date(user.updatedAt).toLocaleString()}
                 </p>
                 <p>
                   <span className="inline-block min-w-[120px] text-gray-400">
                     Status:
                   </span>
-                  {user.status}
-                </p>
-                <p>
-                  <span className="inline-block min-w-[120px] text-gray-400">
-                    Ban until:
+                  <span className={user.status === 'banned' ? 'text-red-500' : 'text-green-500'}>
+                    {user.status || 'active'}
                   </span>
-                  {user.banUntil}
                 </p>
+                {user.banUntil && (
+                  <p>
+                    <span className="inline-block min-w-[120px] text-gray-400">
+                      Ban until:
+                    </span>
+                    <span className="text-red-500">
+                      {new Date(user.banUntil).toLocaleString()}
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -160,61 +225,57 @@ export default function Adminuserid() {
                 <thead className="bg-gray-100 text-gray-700">
                   <tr className="text-center">
                     <th className="p-3">Report ID</th>
-                    <th className="p-3">By User ID</th>
-                    <th className="p-3">Report User ID</th>
-                    <th className="p-3">Last update</th>
-                    <th className="p-3">Action</th>
+                    <th className="p-3">By User</th>
+                    <th className="p-3">Reason</th>
+                    <th className="p-3">Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reports.map((report) => (
-                    <tr
-                      key={report.id}
-                      className="text-center hover:bg-gray-50"
-                    >
-                      <td className="p-3">{report.id}</td>
-                      <td className="p-3">{report.byUserId}</td>
-                      <td className="p-3">{report.reportUserId}</td>
-                      <td className="p-3 text-sm">{report.lastUpdate}</td>
-                      <td className="p-3">
-                        <div className="flex justify-center space-x-2">
-                          <button title="Edit">
-                            <PencilIcon className="h-5 w-5 text-blue-500 cursor-pointer" />
-                          </button>
-                          <button title="Delete">
-                            <TrashIcon className="h-5 w-5 text-red-500 cursor-pointer" />
-                          </button>
-                        </div>
+                  {reports.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="text-center py-4 text-gray-500">
+                        No reports found
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    reports.map((report) => (
+                      <tr
+                        key={report._id}
+                        className="text-center hover:bg-gray-50"
+                      >
+                        <td className="p-3">{report._id}</td>
+                        <td className="p-3">{report.byUserId?.name || 'Unknown'}</td>
+                        <td className="p-3">{report.reason}</td>
+                        <td className="p-3">{new Date(report.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex justify-end items-center mt-4 text-sm text-gray-500 px-1">
-              <div className="space-x-2">
-                <button className="px-2 py-1 border rounded hover:bg-gray-200">
-                  {"<"}
-                </button>
-                <span>1 of 1</span>
-                <button className="px-2 py-1 border rounded hover:bg-gray-200">
-                  {">"}
-                </button>
-              </div>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex justify-start space-x-4 mt-6">
-            <button className="bg-yellow-400 text-black font-semibold py-1 px-6 rounded">
-              Ban
-            </button>
-            <button className="bg-sky-400 text-white font-semibold py-1 px-6 rounded">
-              UnBan
-            </button>
-            <button className="bg-red-500 text-white font-semibold py-1 px-6 rounded">
+            {user.status !== 'banned' ? (
+              <button 
+                onClick={handleBan}
+                className="bg-yellow-400 text-black font-semibold py-1 px-6 rounded hover:bg-yellow-500"
+              >
+                Ban
+              </button>
+            ) : (
+              <button 
+                onClick={handleUnban}
+                className="bg-sky-400 text-white font-semibold py-1 px-6 rounded hover:bg-sky-500"
+              >
+                UnBan
+              </button>
+            )}
+            <button 
+              onClick={handleDelete}
+              className="bg-red-500 text-white font-semibold py-1 px-6 rounded hover:bg-red-600"
+            >
               Delete
             </button>
           </div>

@@ -1,22 +1,52 @@
-import mongoose, { Schema, model, models, Document, Types, Model } from 'mongoose';
+import mongoose from 'mongoose';
 
-export interface IReport extends Document {
-  byUserId: Types.ObjectId;
-  reportUserId: Types.ObjectId;
-  reason: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const ReportSchema = new Schema<IReport>(
-  {
-    byUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    reportUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    reason: { type: String, required: true },
+const reportSchema = new mongoose.Schema({
+  byUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
   },
-  { timestamps: true }
-);
+  reportUserId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true
+  },
+  reason: {
+    type: String,
+    required: true
+  },
+  detail: {
+    type: String,
+    default: ''
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    index: true
+  },
+  postId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CommunityPost',
+    index: true
+  },
+  commentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Comment',
+    index: true
+  },
+  replyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Reply',
+    index: true
+  }
+});
 
-const Report: Model<IReport> = models.Report || model<IReport>("Report", ReportSchema);
+// Compound indexes for common queries
+reportSchema.index({ createdAt: -1 });
+reportSchema.index({ reportUserId: 1, createdAt: -1 });
+
+const Report = mongoose.models.Report || mongoose.model('Report', reportSchema);
 
 export default Report;

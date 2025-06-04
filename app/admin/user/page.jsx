@@ -17,18 +17,21 @@ export default function Adminuser() {
   const router = useRouter();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   useEffect(() => {
     async function fetchUsers() {
       setLoading(true);
       try {
         const res = await fetch("/api/admin/user", {
-          credentials: "include", // ส่ง cookie (token) ไปด้วย
+          credentials: "include",
         });
         if (!res.ok) throw new Error("โหลดข้อมูลผู้ใช้ล้มเหลว");
 
         const data = await res.json();
         setUsers(data);
+        setFilteredUsers(data);
       } catch (error) {
         console.error(error);
         alert("โหลดข้อมูลผู้ใช้ล้มเหลว");
@@ -39,6 +42,16 @@ export default function Adminuser() {
 
     fetchUsers();
   }, []);
+
+  // Filter users based on search term
+  useEffect(() => {
+    const filtered = users.filter(user => 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user._id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredUsers(filtered);
+  }, [searchTerm, users]);
 
   // ลบผู้ใช้จริง โดยเรียก API DELETE
   const handleDelete = async (id) => {
@@ -54,6 +67,7 @@ export default function Adminuser() {
 
       // ลบ user ออกจาก state เพื่อรีเฟรช UI
       setUsers(users.filter((u) => u._id !== id));
+      alert("ลบผู้ใช้สำเร็จ");
     } catch (error) {
       console.error(error);
       alert("ลบผู้ใช้ล้มเหลว");
@@ -64,6 +78,22 @@ export default function Adminuser() {
     router.push(`/admin/user/${user._id}`);
   };
   
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <HeadLogo />
+        <div className="flex pt-[70px]">
+          <aside className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-purple-400 z-40 shadow-lg">
+            <AdminNavbar />
+          </aside>
+          <main className="ml-72 flex-1 flex items-center justify-center">
+            <p className="text-gray-500">Loading...</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       {/* Header */}
@@ -74,7 +104,7 @@ export default function Adminuser() {
       {/* Sidebar + Main */}
       <div className="flex pt-[70px] h-screen">
         {/* Sidebar */}
-        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-sky-400 z-40 shadow">
+        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-purple-400 z-40 shadow">
           <AdminNavbar />
         </div>
 
@@ -88,8 +118,10 @@ export default function Adminuser() {
                 <MagnifyingGlassIcon className="h-5 w-5 text-gray-500 mr-2" />
                 <input
                   type="text"
-                  placeholder="Search ..."
+                  placeholder="Search by name, email, or ID..."
                   className="bg-transparent outline-none text-sm w-full"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
@@ -103,35 +135,49 @@ export default function Adminuser() {
                   <th className="px-4 py-2">User ID</th>
                   <th className="px-4 py-2">Username</th>
                   <th className="px-4 py-2">Email</th>
+                  <th className="px-4 py-2">Role</th>
                   <th className="px-4 py-2">Last update</th>
                   <th className="px-4 py-2">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {users.length === 0 ? (
+                {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="text-center py-4">
-                      ไม่มีผู้ใช้งานในระบบ
+                    <td colSpan={6} className="text-center py-4">
+                      {searchTerm ? "No users found matching your search" : "No users in the system"}
                     </td>
                   </tr>
                 ) : (
-                  users.map((user, index) => (
+                  filteredUsers.map((user) => (
                     <tr key={user._id} className="hover:bg-gray-50">
                       <td className="px-4 py-2">{user._id}</td>
                       <td className="px-4 py-2">{user.name}</td>
                       <td className="px-4 py-2">{user.email}</td>
                       <td className="px-4 py-2">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {user.role || 'user'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2">
                         {new Date(user.updatedAt).toLocaleDateString()}
                       </td>
                       <td className="px-4 py-2 flex space-x-2">
-                        <PencilIcon
-                          className="h-5 w-5 text-blue-500 cursor-pointer"
+                        <button
                           onClick={() => handleEdit(user)}
-                        />
-                        <TrashIcon
-                          className="h-5 w-5 text-red-500 cursor-pointer"
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Edit user"
+                        >
+                          <PencilIcon className="h-5 w-5 text-blue-500" />
+                        </button>
+                        <button
                           onClick={() => handleDelete(user._id)}
-                        />
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Delete user"
+                        >
+                          <TrashIcon className="h-5 w-5 text-red-500" />
+                        </button>
                       </td>
                     </tr>
                   ))
