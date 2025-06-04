@@ -4,7 +4,7 @@ import mongoose, { Schema, model, models, Document } from 'mongoose';
 //
 // 1. กำหนด interface ของ Report (ใช้ได้ทั้งระดับ Post, Comment, Reply)
 //
-export interface IReport {
+interface IReport {
   _id:        string;
   userId:     string;
   reason:     string;
@@ -15,7 +15,7 @@ export interface IReport {
 //
 // 2. กำหนด interface ของ Reply (level-2)
 //
-export interface IReply {
+interface IReply {
   _id:       string;
   userId:    string;
   userName:  string;
@@ -28,7 +28,7 @@ export interface IReply {
 //
 // 3. กำหนด interface ของ Comment (level-1)
 //
-export interface IComment {
+interface IComment {
   _id:       string;
   userId:    string;
   userName:  string;
