@@ -6,11 +6,15 @@ import CommunityPost from '@/models/CommunityPost';
 import User, { IUser } from '@/models/User';
 import { getUserFromReq } from '@/utils/auth';
 
-export async function POST(
-  request: NextRequest,
-  context: { params: { postid: string } }
-) {
-  const { postid } = context.params;
+export async function POST(request: NextRequest) {
+  // ดึง postid จาก pathname
+  const pathname = request.nextUrl.pathname;
+  const parts = pathname.split('/');
+  const postid = parts[3];  // ['', 'api', 'community', 'postid', 'comment']
+
+  if (!postid) {
+    return NextResponse.json({ error: 'Missing postid' }, { status: 400 });
+  }
 
   try {
     // 2. ตรวจสอบ token & ดึง userId
@@ -68,11 +72,15 @@ export async function POST(
   }
 }
 
-export async function GET(
-  request: NextRequest,
-  context: { params: { postid: string } }
-) {
-  const { postid } = context.params;
+export async function GET(request: NextRequest) {
+  // ดึง postid จาก pathname
+  const pathname = request.nextUrl.pathname;
+  const parts = pathname.split('/');
+  const postid = parts[3];  // ['', 'api', 'community', 'postid', 'comment']
+
+  if (!postid) {
+    return NextResponse.json({ error: 'Missing postid' }, { status: 400 });
+  }
 
   try {
     await connectDB();

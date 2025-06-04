@@ -28,9 +28,18 @@ export default function PostDetailPage() {
   const [reportPostId, setReportPostId] = useState(null);
   const [reportReason, setReportReason] = useState('');
   const [reportDetail, setReportDetail] = useState('');
+  const [user, setUser] = useState(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // ── 1. โหลดข้อมูลโพสต์พร้อมคอมเมนต์เมื่อ mount ──────────────────────────
+  // ── 1. โหลดข้อมูล user และโพสต์เมื่อ mount ──────────────────────────
   useEffect(() => {
+    // ดึงข้อมูล user
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => setUser(data))
+      .catch(() => setUser(null));
+
+    // ดึงข้อมูลโพสต์
     if (!postid) return;
     (async () => {
       try {
@@ -46,6 +55,42 @@ export default function PostDetailPage() {
       }
     })();
   }, [postid]);
+
+  // ── 2. แสดง Login Modal ──────────────────────────────────────────────
+  const LoginModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
+        <h2 className="text-xl font-semibold mb-4">Sign in Required</h2>
+        <p className="text-gray-600 mb-4">Please sign in to interact with posts and comments.</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={() => setShowLoginModal(false)}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              setShowLoginModal(false);
+              router.push('/login');
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Sign in
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── 3. ตรวจสอบ Authentication ก่อนทำ interaction ──────────────────────
+  const checkAuth = () => {
+    if (!user) {
+      setShowLoginModal(true);
+      return false;
+    }
+    return true;
+  };
 
   if (!post) {
     return (
@@ -63,8 +108,10 @@ export default function PostDetailPage() {
     );
   }
 
-  // ── 2. Toggle Like ของตัวโพสต์ ───────────────────────────────────────────
+  // ── 4. Toggle Like ของตัวโพสต์ ───────────────────────────────────────
   const toggleLikePost = async () => {
+    if (!checkAuth()) return;
+
     try {
       await fetch(`/api/community/${post._id}/like`, {
         method: 'POST',
@@ -82,9 +129,10 @@ export default function PostDetailPage() {
     }
   };
 
-  // ── 3. Toggle Like ของ comment/reply ใด ๆ ─────────────────────────────────
-  // รับ param เป็น commentId หรือ replyId โดยจะค้นใน level-1 หรือ level-2 ก็ได้
+  // ── 5. Toggle Like ของ comment/reply ใด ๆ ─────────────────────────────
   const toggleLikeComment = async (commentId) => {
+    if (!checkAuth()) return;
+
     try {
       await fetch(`/api/community/${post._id}/comment/${commentId}/like`, {
         method: 'POST',
@@ -123,8 +171,10 @@ export default function PostDetailPage() {
     }
   };
 
-  // ── 4. Submit comment ใหม่ (level-1) ────────────────────────────────────────
+  // ── 6. Submit comment ใหม่ (level-1) ────────────────────────────────────
   const submitComment = async () => {
+    if (!checkAuth()) return;
+
     const textTrim = newComment.trim();
     if (!textTrim) return;
 
@@ -144,9 +194,11 @@ export default function PostDetailPage() {
     }
   };
 
-  // ── 5. Submit reply (level-2) ───────────────────────────────────────────────
+  // ── 7. Submit reply (level-2) ───────────────────────────────────────────
   // ถ้าอยากให้ reply ไปอยู่ใต้ comment ใด ให้ส่ง commentId เป็น parent
   const submitReply = async (parentCommentId) => {
+    if (!checkAuth()) return;
+
     const textTrim = (replyText[parentCommentId] || '').trim();
     if (!textTrim) return;
 
@@ -175,12 +227,14 @@ export default function PostDetailPage() {
     }
   };
 
-  // ── 6. เปิด/ปิด Report Modal (ทั้งโพสต์และ comment/reply) ─────────────────
+  // ── 8. เปิด/ปิด Report Modal (ทั้งโพสต์และ comment/reply) ─────────────────
   const openReport = (id) => {
+    if (!checkAuth()) return;
     setReportPostId(id);
     setShowReportModal(true);
   };
   const submitReport = async () => {
+    if (!checkAuth()) return;
     if (!reportReason) {
       alert('กรุณาเลือกเหตุผล');
       return;
