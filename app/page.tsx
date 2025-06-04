@@ -10,6 +10,7 @@ import {
   PencilSquareIcon,
   TrashIcon,
   ArrowDownTrayIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/solid';
 
 import Navbar from "@/components/navbar";
@@ -17,7 +18,7 @@ import HeadLogo from "@/components/headLogo";
 
 interface DrawingItem {
   _id: string;
-  name: string;         // ตรงกับ field “name” ใน MongoDB
+  name: string;         // ตรงกับ field "name" ใน MongoDB
   imageUrl: string;
   thumbnailUrl: string;
   updatedAt: string;
@@ -128,12 +129,12 @@ export default function GalleryPage() {
 
   return (
     <div className="min-h-screen bg-white">
-          {/* HeadLogo */}
-          <div className="fixed top-0 left-0 w-full h-[70px] bg-white shadow z-50">
-            <HeadLogo />
-          </div>
+      {/* HeadLogo */}
+      <div className="fixed top-0 left-0 w-full h-[70px] bg-white shadow z-50">
+        <HeadLogo />
+      </div>
 
-          <div className="flex pt-[70px]">
+      <div className="flex pt-[70px]">
         {/* Navbar */}
         <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-72 bg-sky-400 z-40 shadow">
           <Navbar />
@@ -157,20 +158,41 @@ export default function GalleryPage() {
           <h2 className="text-3xl font-bold mb-6">My Gallery</h2>
 
           {isLoggedIn === null && (
-            <p className="text-center text-gray-500">Loading...</p>
-          )}
-          {isLoggedIn === false && (
-            <div className="text-center mt-12">
-              <p className="mb-4 text-gray-700">
-                กรุณาเข้าสู่ระบบเพื่อดู Gallery ของคุณ
-              </p>
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
             </div>
           )}
-          {isLoggedIn === true && items.length === 0 && (
-            <p className="text-center text-gray-500 mt-12">
-              ยังไม่มีผลงานใน Gallery
-            </p>
+
+          {isLoggedIn === false && (
+            <div className="text-center mt-12 bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
+              <h3 className="text-2xl font-semibold mb-4 text-gray-800">Welcome to Artopia!</h3>
+              <p className="mb-6 text-gray-600">
+                Sign in to view your gallery and start sharing your artwork with the world.
+              </p>
+              <Link 
+                href="/login"
+                className="inline-flex items-center px-6 py-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+              >
+                <ArrowRightOnRectangleIcon className="w-5 h-5 mr-2" />
+                Sign In
+              </Link>
+            </div>
           )}
+
+          {isLoggedIn === true && items.length === 0 && (
+            <div className="text-center bg-white rounded-lg shadow-lg p-8 max-w-md mx-auto">
+              <p className="text-gray-600 mb-4">
+                ยังไม่มีผลงานใน Gallery
+              </p>
+              <Link
+                href="/draw"
+                className="inline-block px-6 py-3 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+              >
+                Start Drawing
+              </Link>
+            </div>
+          )}
+
           {isLoggedIn === true && items.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
               {items.map((d) => (

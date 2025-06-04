@@ -2,8 +2,8 @@
 
 import React, { useState, useRef } from 'react';
 import { PhotoIcon, ArrowUpTrayIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import Navbar from '@/components/Navbar';
-import HeadLogo from '@/components/HeadLogo';
+import Navbar from "@/components/navbar";
+import HeadLogo from "@/components/headLogo";
 import { useRouter } from 'next/navigation';
 
 export default function UploadPage() {
