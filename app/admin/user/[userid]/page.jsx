@@ -247,7 +247,6 @@ export default function AdminUserDetail() {
                       <td className="p-3">
                         <div className="flex justify-center space-x-2">
                           <button
-                          <button
                             title="Edit"
                             onClick={() =>
                               router.push(`/admin/report/${report._id}`)
@@ -256,19 +255,11 @@ export default function AdminUserDetail() {
                             <PencilIcon className="h-5 w-5 text-blue-500 cursor-pointer" />
                           </button>
                           <button
-                          <button
                             title="Delete"
                             onClick={async () => {
                               if (!confirm("ต้องการลบรายงานนี้หรือไม่?"))
                                 return;
                               try {
-                                const res = await fetch(
-                                  `/api/admin/report/${report._id}`,
-                                  {
-                                    method: "DELETE",
-                                    credentials: "include",
-                                  }
-                                );
                                 const res = await fetch(
                                   `/api/admin/report/${report._id}`,
                                   {
@@ -337,11 +328,6 @@ export default function AdminUserDetail() {
                       </label>
                       <select
                         value={banDuration}
-                      <label className="text-gray-600 whitespace-nowrap">
-                        ระยะเวลาแบน:
-                      </label>
-                      <select
-                        value={banDuration}
                         onChange={(e) => setBanDuration(e.target.value)}
                         className="border rounded px-3 py-2"
                       >
@@ -354,7 +340,6 @@ export default function AdminUserDetail() {
                         <option value="permanent">ถาวร</option>
                       </select>
                     </div>
-                    <button
                     <button
                       onClick={() => {
                         if (
@@ -376,7 +361,6 @@ export default function AdminUserDetail() {
                   </>
                 )}
               </div>
-              <button
               <button
                 onClick={() => {
                   if (
