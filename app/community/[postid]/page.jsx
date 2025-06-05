@@ -1,92 +1,78 @@
-// File: app/community/[postid]/page.jsx
+// File: app/community/page.jsx
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
 import HeadLogo from "@/components/headlogo";
-import Image from "next/image";
 import {
   HeartIcon as HeartIconSolid,
   HeartIcon as HeartIconOutline,
-  ChatBubbleBottomCenterTextIcon as CommentIconOutline,
   FlagIcon as FlagIconOutline,
-  ArrowLeftIcon,
-  PaperAirplaneIcon as SendIcon,
+  EllipsisVerticalIcon,
+  ChatBubbleBottomCenterTextIcon as CommentIconOutline,
+  UsersIcon,
+  MagnifyingGlassIcon, // เพิ่มการ import MagnifyingGlassIcon
 } from "@heroicons/react/24/outline";
 
-export default function PostDetailPage() {
+export default function CommunityFeed() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const { postid } = useParams();
+  const searchTermParam =
+    searchParams.get("search")?.trim().toLowerCase() || "";
 
-  const [post, setPost] = useState(null);
-  const [hearted, setHearted] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [newComment, setNewComment] = useState("");
-  // เก็บข้อความ reply ของแต่ละ comment ด้วย object: { [commentId]: replyText }
-  const [replyText, setReplyText] = useState({});
+  const [posts, setPosts] = useState([]);
+  const [likedPosts, setLikedPosts] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [menuOpenId, setMenuOpenId] = useState(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportPostId, setReportPostId] = useState(null);
   const [reportReason, setReportReason] = useState("");
   const [reportDetail, setReportDetail] = useState("");
   const [user, setUser] = useState(null);
-
-  // เพิ่ม state สำหรับ guest alert popup
   const [showGuestAlert, setShowGuestAlert] = useState(false);
 
-  // ฟังก์ชันสำหรับโหลดข้อมูลโพสต์และคอมเมนต์
-  const loadPostAndComments = async () => {
-    try {
-      // โหลดข้อมูลโพสต์
-      const postRes = await fetch(`/api/community/${postid}`, {
-        credentials: "include",
-      });
-      if (!postRes.ok) return;
-      const postData = await postRes.json();
-      setPost(postData);
-
-      // โหลดข้อมูล comments พร้อม user data
-      const commentsRes = await fetch(`/api/community/${postid}/comment`, {
-        credentials: "include",
-      });
-      if (!commentsRes.ok) return;
-      const { comments: commentsData } = await commentsRes.json();
-
-      // โหลด replies พร้อม user data สำหรับแต่ละ comment
-      for (const comment of commentsData) {
-        const repliesRes = await fetch(
-          `/api/community/${postid}/comment/${comment._id}/reply`,
-          {
-            credentials: "include",
-          }
-        );
-        if (repliesRes.ok) {
-          const { replies } = await repliesRes.json();
-          comment.replies = replies;
-        }
-      }
-
-      setComments(commentsData);
-    } catch (err) {
-      console.error("Fetch post detail failed:", err);
-    }
+  // ฟังก์ชันจับเมนู "…" ของแต่ละโพสต์
+  const toggleMenu = (e, postId) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpenId((prevId) => (prevId === postId ? null : postId));
   };
 
-  // Effect สำหรับโหลดข้อมูล user และตั้ง interval สำหรับรีเฟรชข้อมูล
   useEffect(() => {
-    // ดึงข้อมูล user
+    // 1) ตรวจสอบ user (guest หรือ logged-in)
     fetch("/api/auth/me", { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setUser(data))
       .catch(() => setUser(null));
 
-    if (!postid) return;
+    // 2) ดึงโพสต์ทั้งหมด
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/community/list", {
+          credentials: "include",
+        });
+        const data = await res.json();
+        setPosts(data);
 
-    // โหลดข้อมูลครั้งแรก
-    loadPostAndComments();
-  }, [postid]);
+        // กำหนดสถานะ likedPosts เริ่มต้น (ยังไม่ได้กดไลก์)
+        const initLikes = {};
+        data.forEach((p) => {
+          initLikes[p._id] = false;
+        });
+        setLikedPosts(initLikes);
+      } catch (err) {
+        console.error("Fetch community failed:", err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  // ฟังก์ชันตรวจสอบว่าเป็น guest user หรือไม่
+  // ฟังก์ชันเช็ก guest user ก่อนทำ action
   const checkGuestUser = () => {
     if (!user) {
       setShowGuestAlert(true);
@@ -95,203 +81,53 @@ export default function PostDetailPage() {
     return false;
   };
 
-  if (!post) {
-    // ไม่ต้องขึ้นกำลังโหลด ให้แสดง Navbar และ HeadLogo ตามปกติ
-    return (
-      <div className="min-h-screen">
-        <div className="fixed top-0 left-0 w-full h-[70px] bg-white shadow z-50">
-          <HeadLogo />
-        </div>
-        <div className="flex pt-[70px] h-screen">
-          <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-50 bg-sky-400 z-40 shadow">
-            <Navbar />
-          </div>
-          <main className="ml-50 flex-1 overflow-y-auto px-6 py-4 pt-6" />
-        </div>
-      </div>
-    );
-  }
-
-  // ── 2. Toggle Like ของตัวโพสต์ ───────────────────────────────────────────
-  const toggleLikePost = async () => {
-    // ตรวจสอบ guest user ก่อน
+  // ฟังก์ชันกดไลก์โพสต์
+  const toggleLike = async (e, postId) => {
+    e.preventDefault();
     if (checkGuestUser()) return;
 
     try {
-      await fetch(`/api/community/${post._id}/like`, {
+      await fetch(`/api/community/${postId}/like`, {
         method: "POST",
         credentials: "include",
       });
-      setHearted((h) => !h);
-      setPost((p) => ({
-        ...p,
-        likes: hearted
-          ? p.likes.filter((uid) => uid !== "dummy")
-          : [...p.likes, "dummy"],
+      setLikedPosts((prev) => ({
+        ...prev,
+        [postId]: !prev[postId],
       }));
-    } catch (err) {
-      console.error("Toggle like post failed:", err);
-    }
-  };
-
-  // ── 3. Toggle Like ของ comment/reply ใด ๆ ─────────────────────────────────
-  // รับ param เป็น commentId หรือ replyId โดยจะค้นใน level-1 หรือ level-2 ก็ได้
-  const toggleLikeComment = async (commentId) => {
-    // ตรวจสอบ guest user ก่อน
-    if (checkGuestUser()) return;
-
-    try {
-      await fetch(`/api/community/${post._id}/comment/${commentId}/like`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      // ปรับค่า local state ให้ตรงกับ API: หา comment/reply แล้วสลับ like ในหน้าเดียว
-      setComments((prev) =>
-        prev.map((c) => {
-          // 1) ถ้า comment นี้ตรงกับ commentId
-          if (c._id === commentId) {
-            const likesArr = c.likes || [];
-            if (likesArr.includes("")) {
-              return { ...c, likes: likesArr.filter((x) => x !== "") };
-            } else {
-              return { ...c, likes: [...likesArr, ""] };
-            }
-          }
-          // 2) ถ้าไม่ใช่ ให้ไปตรวจใน replies
-          const newReplies = (c.replies || []).map((r) => {
-            if (r._id === commentId) {
-              const rLikes = r.likes || [];
-              if (rLikes.includes("")) {
-                return { ...r, likes: rLikes.filter((x) => x !== "") };
-              } else {
-                return { ...r, likes: [...rLikes, ""] };
+      setPosts((prev) =>
+        prev.map((p) =>
+          p._id === postId
+            ? {
+                ...p,
+                likes: likedPosts[postId]
+                  ? p.likes.filter((uid) => uid !== "")
+                  : [...p.likes, ""],
               }
-            }
-            return r;
-          });
-          return { ...c, replies: newReplies };
-        })
+            : p
+        )
       );
     } catch (err) {
-      console.error("Toggle like comment failed:", err);
+      console.error("Toggle like failed:", err);
     }
   };
 
-  // ── 4. Submit comment ใหม่ (level-1) ────────────────────────────────────────
-  const submitComment = async () => {
-    // ตรวจสอบ guest user ก่อน
+  // ฟังก์ชันเปิด modal Report
+  const openReport = (e, postId) => {
+    e.preventDefault();
     if (checkGuestUser()) return;
-
-    const textTrim = newComment.trim();
-    if (!textTrim) return;
-
-    try {
-      // ส่ง comment ไปที่ API
-      const res = await fetch(`/api/community/${post._id}/comment`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: textTrim }),
-      });
-      if (!res.ok) return;
-      const c = await res.json();
-
-      // ดึงข้อมูล comments ล่าสุดมาใช้
-      const commentsRes = await fetch(`/api/community/${post._id}/comment`, {
-        credentials: "include",
-      });
-      if (commentsRes.ok) {
-        const { comments: commentsData } = await commentsRes.json();
-        setComments(commentsData);
-      } else {
-        // ถ้าดึงข้อมูลล่าสุดไม่ได้ ค่อยใช้ข้อมูลจาก response แรก
-        setComments((arr) => [...arr, { ...c, likes: [], replies: [] }]);
-      }
-
-      setNewComment("");
-    } catch (err) {
-      console.error("Submit comment failed:", err);
-    }
-  };
-
-  // ── 5. Submit reply (level-2) ───────────────────────────────────────────────
-  // ถ้าอยากให้ reply ไปอยู่ใต้ comment ใด ให้ส่ง commentId เป็น parent
-  const submitReply = async (parentCommentId) => {
-    // ตรวจสอบ guest user ก่อน
-    if (checkGuestUser()) return;
-
-    const textTrim = (replyText[parentCommentId] || "").trim();
-    if (!textTrim) return;
-
-    try {
-      // ส่ง reply ไปที่ API
-      const res = await fetch(
-        `/api/community/${post._id}/comment/${parentCommentId}/reply`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: textTrim }),
-        }
-      );
-      if (!res.ok) return;
-      const r = await res.json();
-
-      // ดึงข้อมูล replies ล่าสุดมาใช้
-      const repliesRes = await fetch(
-        `/api/community/${post._id}/comment/${parentCommentId}/reply`,
-        {
-          credentials: "include",
-        }
-      );
-
-      if (repliesRes.ok) {
-        const { replies } = await repliesRes.json();
-        // อัพเดท replies ของ comment นั้น
-        setComments((prev) =>
-          prev.map((c) => {
-            if (c._id === parentCommentId) {
-              return { ...c, replies };
-            }
-            return c;
-          })
-        );
-      } else {
-        // ถ้าดึงข้อมูลล่าสุดไม่ได้ ค่อยใช้ข้อมูลจาก response แรก
-        setComments((prev) =>
-          prev.map((c) => {
-            if (c._id === parentCommentId) {
-              const oldReplies = c.replies || [];
-              return { ...c, replies: [...oldReplies, { ...r, likes: [] }] };
-            }
-            return c;
-          })
-        );
-      }
-
-      setReplyText((prev) => ({ ...prev, [parentCommentId]: "" }));
-    } catch (err) {
-      console.error("Submit reply failed:", err);
-    }
-  };
-
-  // ── 6. เปิด/ปิด Report Modal (ทั้งโพสต์และ comment/reply) ─────────────────
-  const openReport = (id) => {
-    // ตรวจสอบ guest user ก่อน
-    if (checkGuestUser()) return;
-
-    setReportPostId(id);
+    setReportPostId(postId);
     setShowReportModal(true);
   };
 
+  // ส่งข้อมูล Report ไปยัง API
   const submitReport = async () => {
     if (!reportReason) {
-      alert("กรุณาเลือกเหตุผล");
+      alert("กรุณาเลือกเหตุผลก่อน");
       return;
     }
     try {
-      await fetch(`/api/community/${post._id}/report`, {
+      await fetch(`/api/community/${reportPostId}/report`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -310,284 +146,261 @@ export default function PostDetailPage() {
     }
   };
 
+  // กรองโพสต์ตาม searchTermParam (ชื่อคนโพสต์ หรือ caption)
+  const filteredPosts = posts.filter((p) => {
+    if (!searchTermParam) return true;
+    const nameMatch = p.userName.toLowerCase().includes(searchTermParam);
+    const captionMatch = p.caption.toLowerCase().includes(searchTermParam);
+    return nameMatch || captionMatch;
+  });
+
   return (
     <div className="min-h-screen">
-      {/* HeadLogo */}
+      {/* Header (fixed สูง 70px) */}
       <div className="fixed top-0 left-0 w-full h-[70px] bg-white shadow z-50">
         <HeadLogo />
       </div>
 
       <div className="flex pt-[70px] h-screen">
-        {/* Navbar */}
-        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-50 bg-sky-400 z-40 shadow">
+        {/* Sidebar (fixed) */}
+        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-56 bg-sky-400 z-40 shadow">
           <Navbar />
         </div>
 
-        {/* Main Content */}
-        <main className="ml-50 flex flex-1 min-h-[calc(100vh-70px)] items-center justify-center overflow-y-auto px-6 py-4 pt-6">
-          <div className="w-full flex justify-center">
-            <div className="w-full max-w-screen-xl">
-              <div className="cursor-pointer mb-4">
-                <button
-                  onClick={() => router.back()}
-                  className="text-black hover:opacity-70"
-                >
-                  <ArrowLeftIcon className="w-6 h-6" />
-                </button>
-              </div>
-
-              <div className="flex justify-center px-6 pb-3 bg-white">
-                <div className="flex flex-col lg:flex-row gap-6 w-full max-w-screen-xl">
-                  {/* Left: Post - ขนาดคงที่ */}
-                  <div className="w-full lg:w-2/3 bg-white rounded-2xl shadow-md p-6 h-[600px] flex flex-col">
-                    {/* Container สำหรับรูปภาพ - จำกัดขนาด */}
-                    <div className="flex-1 flex items-center justify-center overflow-hidden rounded-lg mb-4 bg-gray-50">
-                      <img
-                        src={post.imageUrl}
-                        alt={post.caption}
-                        className="w-full h-full object-cover rounded"
-                      />
-                    </div>
-
-                    {/* ข้อมูลโพสต์ - ส่วนล่าง */}
-                    <div className="flex-shrink-0">
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                            <Image
-                              src={
-                                post.userAvatar ||
-                                "https://api.dicebear.com/7.x/bottts/svg?seed=1"
-                              }
-                              alt={post.userName}
-                              fill
-                              sizes="32px"
-                              className="object-cover"
-                              priority
-                            />
-                          </div>
-                          <span className="font-semibold">{post.userName}</span>
-                        </div>
-
-                        <button
-                          onClick={() => openReport(post._id)}
-                          className="px-1 py-1 text-sm rounded hover:bg-gray-100 flex items-center gap-1 border"
-                        >
-                          <FlagIconOutline className="w-6 h-6 text-black" />
-                          Report
-                        </button>
-                      </div>
-
-                      <p className="text-gray-800 text-sm mb-3 line-clamp-2">
-                        {post.caption}
-                      </p>
-
-                      <div className="flex flex-wrap gap-4 text-gray-500 text-sm items-center">
-                        <button
-                          onClick={toggleLikePost}
-                          className="flex items-center gap-1 hover:opacity-70"
-                        >
-                          {hearted ? (
-                            <HeartIconSolid className="w-6 h-6 text-black fill-current" />
-                          ) : (
-                            <HeartIconOutline className="w-6 h-6 text-black" />
-                          )}
-                          <span>{post.likes.length} Likes</span>
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <CommentIconOutline className="w-6 h-6 text-black" />
-                          <span>{comments.length} Comments</span>
-                        </div>
-                      </div>
-                    </div>
+        {/* Main Content - ปรับ padding และใช้ max-width */}
+        <main className="ml-56 flex-1 min-h-screen px-8 py-6 bg-white">
+          <div className="max-w-7xl mx-auto">
+            {/* Header Section - ใช้ Grid Layout เพื่อให้พื้นที่คงที่ */}
+            <div className="h-32 mb-8 p-6 bg-gradient-to-r from-sky-50 to-blue-50 rounded-2xl shadow-sm border border-sky-100">
+              <div className="grid grid-cols-2 gap-6 h-full items-center">
+                {/* Community Title - Column 1 */}
+                <div className="flex items-center gap-3">
+                  {/* ใช้ UsersIcon จาก Heroicons */}
+                  <div className="w-12 h-12 bg-gradient-to-br from-sky-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <UsersIcon className="w-7 h-7 text-white" />
                   </div>
+                  <div>
+                    <h2 className="text-4xl font-bold bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">
+                      Community
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Discover amazing artworks from our community
+                    </p>
+                  </div>
+                </div>
 
-                  {/* Right: Comments */}
-                  <div className="w-full lg:w-[480px] bg-sky-300 rounded-2xl p-4 flex flex-col h-[600px]">
-                    <h3 className="text-xl font-semibold mb-4">Comments</h3>
-
-                    {/* Scrollable Comment List */}
-                    <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-                      {comments.map((c) => (
-                        <div key={c._id} className="mb-2">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <div className="relative w-6 h-6 rounded-full overflow-hidden">
-                                <Image
-                                  src={
-                                    c.userAvatar ||
-                                    "https://api.dicebear.com/7.x/bottts/svg?seed=2"
-                                  }
-                                  alt={c.userName}
-                                  fill
-                                  sizes="24px"
-                                  className="object-cover"
-                                  priority
-                                />
-                              </div>
-                              <span className="font-semibold text-sm">
-                                {c.userName}
-                              </span>
-                            </div>
-
-                            {/* ... vertical icon */}
-                            <div className="relative">
-                              <button
-                                onClick={() => openReport(c._id)}
-                                className="text-black hover:opacity-80"
-                              >
-                                <FlagIconOutline className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <p className="text-sm">{c.text}</p>
-
-                          <div className="flex gap-4 mt-1 text-xs text-gray-700">
-                            <button
-                              onClick={() => toggleLikeComment(c._id)}
-                              className="flex items-center gap-1 hover:opacity-70"
-                            >
-                              {(c.likes || []).includes("") ? (
-                                <HeartIconSolid className="w-5 h-5 text-black fill-current" />
-                              ) : (
-                                <HeartIconOutline className="w-5 h-5 text-black" />
-                              )}
-                              <span>{(c.likes || []).length}</span>
-                            </button>
-                          </div>
-
-                          {/* Replies */}
-                          {(c.replies || []).map((r) => (
-                            <div key={r._id} className="ml-6 mt-2 mb-2">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <div className="relative w-5 h-5 rounded-full overflow-hidden">
-                                    <Image
-                                      src={
-                                        r.userAvatar ||
-                                        "https://api.dicebear.com/7.x/bottts/svg?seed=3"
-                                      }
-                                      alt={r.userName}
-                                      fill
-                                      sizes="20px"
-                                      className="object-cover"
-                                      priority
-                                    />
-                                  </div>
-                                  <span className="font-semibold text-xs">
-                                    {r.userName}
-                                  </span>
-                                </div>
-                                <button
-                                  onClick={() => openReport(r._id)}
-                                  className="text-black hover:opacity-80"
-                                >
-                                  <FlagIconOutline className="w-3 h-3" />
-                                </button>
-                              </div>
-                              <p className="text-xs ml-7">{r.text}</p>
-                              <div className="flex gap-4 mt-1 ml-7 text-xs text-gray-700">
-                                <button
-                                  onClick={() => toggleLikeComment(r._id)}
-                                  className="flex items-center gap-1 hover:opacity-70"
-                                >
-                                  {(r.likes || []).includes("") ? (
-                                    <HeartIconSolid className="w-4 h-4 text-black" />
-                                  ) : (
-                                    <HeartIconOutline className="w-4 h-4 text-black" />
-                                  )}
-                                  <span>{(r.likes || []).length}</span>
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-
-                          {/* Reply Input */}
-                          <div className="mt-2 flex items-center ml-6 border rounded px-2 bg-white">
-                            <input
-                              type="text"
-                              placeholder="Reply..."
-                              className="flex-1 px-2 py-1 outline-none text-sm"
-                              value={replyText[c._id] || ""}
-                              onChange={(e) =>
-                                setReplyText((prev) => ({
-                                  ...prev,
-                                  [c._id]: e.target.value,
-                                }))
-                              }
-                            />
-                            <button
-                              onClick={() => submitReply(c._id)}
-                              className="p-1 text-sky-500"
-                            >
-                              <SendIcon className="w-4 h-4 text-black" />
-                            </button>
-                          </div>
+                {/* Search Bar - Column 2 */}
+                <div className="flex justify-end">
+                  <div className="w-96">
+                    <form
+                      className="w-full"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const value = e.target.search?.value?.trim() || "";
+                        router.push(
+                          value
+                            ? `/community?search=${encodeURIComponent(value)}`
+                            : "/community"
+                        );
+                      }}
+                    >
+                      <div className="relative flex items-center bg-white rounded-full shadow-md border border-gray-200 hover:shadow-lg transition-all duration-200 focus-within:ring-2 focus-within:ring-sky-400 focus-within:border-sky-400">
+                        <div className="pl-4 pr-2 flex-shrink-0">
+                          <MagnifyingGlassIcon className="w-5 h-5 text-gray-400" />
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Input comment */}
-                    <div className="mt-4 flex items-center border rounded px-2 bg-white">
-                      <input
-                        type="text"
-                        placeholder="Add a comment..."
-                        className="flex-1 px-2 py-1 outline-none"
-                        value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                      />
-                      <button
-                        onClick={submitComment}
-                        className="p-2 text-sky-500"
-                      >
-                        <SendIcon className="w-6 h-6 text-black" />
-                      </button>
-                    </div>
+                        <input
+                          type="text"
+                          name="search"
+                          defaultValue={searchTermParam}
+                          placeholder="ค้นหาโพสต์หรือชื่อผู้ใช้..."
+                          className="flex-1 py-3 px-2 bg-transparent focus:outline-none text-gray-700 placeholder-gray-400 min-w-0"
+                        />
+                      </div>
+                    </form>
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Posts Grid - เรียงโพสต์แถวละ 4 และมีระยะห่างเหมาะสม */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-10 gap-y-12 justify-items-center">
+              {loading
+                ? // Loading Skeleton
+                  Array.from({ length: 10 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="w-72 bg-white rounded-lg shadow-sm animate-pulse"
+                    >
+                      <div className="bg-gray-200 h-10 rounded-t-lg"></div>
+                      <div className="w-full h-48 bg-gray-200"></div>
+                      <div className="p-4">
+                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      </div>
+                      <div className="px-4 pb-4 flex space-x-6">
+                        <div className="h-6 w-12 bg-gray-200 rounded"></div>
+                        <div className="h-6 w-12 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  ))
+                : filteredPosts.map((post) => (
+                    <Link
+                      key={post._id}
+                      href={`/community/${post._id}`}
+                      passHref
+                    >
+                      <div className="relative bg-white rounded-lg shadow-sm hover:shadow-lg transition cursor-pointer w-72">
+                        <div className="bg-[#00AEEF] text-white flex items-center justify-between px-4 py-2 rounded-t-lg">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={post.userAvatar || "/img/default-avatar.png"}
+                              alt={post.userName}
+                              className="w-6 h-6 rounded-full object-cover"
+                            />
+                            <span className="font-medium text-sm">
+                              {post.userName}
+                            </span>
+                          </div>
+
+                          <div className="relative">
+                            <button
+                              onClick={(e) => toggleMenu(e, post._id)}
+                              className="hover:opacity-80"
+                            >
+                              <EllipsisVerticalIcon className="w-5 h-5" />
+                            </button>
+                            {menuOpenId === post._id && (
+                              <div
+                                className="absolute right-0 mt-2 w-28 bg-white text-black rounded-md shadow-lg z-10"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  onClick={(e) => openReport(e, post._id)}
+                                  className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded"
+                                >
+                                  <FlagIconOutline className="w-4 h-4 mr-2" />
+                                  Report
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* เพิ่มความสูงเป็น h-48 เพื่อให้สัดส่วนดีขึ้น */}
+                        <div className="w-full h-48 bg-gray-100 overflow-hidden">
+                          <img
+                            src={post.thumbnailUrl}
+                            alt={post.caption}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+
+                        <div className="p-4">
+                          <p className="text-gray-800 text-sm line-clamp-2">
+                            {post.caption}
+                          </p>
+                        </div>
+
+                        <div className="px-4 pb-4 flex items-center space-x-6 text-gray-600">
+                          <button
+                            onClick={(e) => toggleLike(e, post._id)}
+                            className="flex items-center space-x-1 text-black"
+                          >
+                            {likedPosts[post._id] ? (
+                              <HeartIconSolid className="w-5 h-5 fill-current" />
+                            ) : (
+                              <HeartIconOutline className="w-5 h-5" />
+                            )}
+                            <span className="text-xs">
+                              {post.likes.length || 0}
+                            </span>
+                          </button>
+                          <div className="flex items-center space-x-1">
+                            <CommentIconOutline className="w-5 h-5" />
+                            <span className="text-xs">
+                              {post.comments.length || 0}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
             </div>
           </div>
         </main>
       </div>
 
-      {/* ── Modal: Guest User Alert ──────────────────────────────────────────── */}
-      {showGuestAlert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center  bg-opacity-50">
-          <div className="bg-white p-6 rounded-2xl w-[90%] max-w-md shadow-xl relative">
-            {/* ปุ่มปิด */}
+      {/* Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-lg w-96 p-6 relative">
             <button
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-semibold"
-              onClick={() => setShowGuestAlert(false)}
+              onClick={() => setShowReportModal(false)}
+              className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
             >
-              &times;
+              ×
             </button>
+            <h3 className="text-xl font-semibold mb-4">Report a problem</h3>
+            <label className="block text-sm font-medium mb-1">
+              Reason for reporting
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none"
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+            >
+              <option value="">-- Select reason --</option>
+              <option value="Posting inappropriate work">
+                Posting inappropriate work
+              </option>
+              <option value="Harassing/Trolling">Harassing/Trolling</option>
+              <option value="Linking to inappropriate sites">
+                Linking to inappropriate sites
+              </option>
+              <option value="Unsuitable content on profile">
+                Unsuitable content on profile
+              </option>
+              <option value="Reproducing others' work">
+                Reproducing others' work
+              </option>
+              <option value="Violating others' privacy">
+                Violating others' privacy
+              </option>
+              <option value="This work depicts child pornography or child abuse">
+                This work depicts child pornography or child abuse
+              </option>
+              <option value="Indicating intent to commit suicide or a crime">
+                Indicating intent to commit suicide or a crime
+              </option>
+              <option value="Causing problems on pixiv Encyclopedia">
+                Causing problems on pixiv Encyclopedia
+              </option>
+              <option value="Other violations of Terms of Use">
+                Other violations of Terms of Use
+              </option>
+            </select>
 
-            {/* หัวข้อ */}
-            <h2 className="text-2xl font-semibold text-center mb-4">
-              Login Required
-            </h2>
+            <label className="block text-sm font-medium mb-1">
+              Your detailed report
+            </label>
+            <textarea
+              rows={4}
+              className="w-full border border-gray-300 rounded-lg p-2 mb-4 resize-none focus:outline-none"
+              placeholder="Optional details"
+              value={reportDetail}
+              onChange={(e) => setReportDetail(e.target.value)}
+            ></textarea>
 
-            {/* ข้อความ */}
-            <p className="text-center text-gray-600 mb-6">
-              Please sign in to interact with posts and comments.
-            </p>
-
-            {/* ปุ่ม */}
-            <div className="flex flex-col gap-3">
+            <div className="flex justify-end space-x-2">
               <button
-                className="w-full bg-sky-400 hover:bg-sky-500 text-white font-semibold py-2 rounded-full"
-                onClick={() => {
-                  setShowGuestAlert(false);
-                  router.push("/login"); // redirect ไปหน้า login
-                }}
+                onClick={submitReport}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:opacity-90"
               >
-                Login
+                Send
               </button>
               <button
-                className="w-full bg-sky-100 hover:bg-sky-200 text-gray-700 font-semibold py-2 rounded-full"
-                onClick={() => setShowGuestAlert(false)}
+                onClick={() => setShowReportModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
               >
                 Cancel
               </button>
@@ -596,90 +409,35 @@ export default function PostDetailPage() {
         </div>
       )}
 
-      {/* ── Modal: Report (ใช้กับทั้งโพสต์ และ comment/reply ได้) ────────────────────────── */}
-      {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-opacity-50">
+      {/* Guest Alert Modal */}
+      {showGuestAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-2xl w-[90%] max-w-md shadow-xl relative">
-            {/* ปุ่มปิด */}
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-semibold"
-              onClick={() => setShowReportModal(false)}
+              onClick={() => setShowGuestAlert(false)}
             >
               &times;
             </button>
-
-            {/* หัวข้อ */}
-            <h2 className="text-2xl font-semibold text-center mb-6">
-              Report a problem
+            <h2 className="text-2xl font-semibold text-center mb-4">
+              Login Required
             </h2>
-
-            {/* เลือกเหตุผล */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">
-                Reason for reporting
-              </label>
-              <select
-                value={reportReason}
-                onChange={(e) => setReportReason(e.target.value)}
-                className="w-full border rounded px-3 py-2 outline-none focus:ring-2 focus:ring-sky-300"
-              >
-                <option value="">-- Select reason --</option>
-                <option value="Posting inappropriate work">
-                  Posting inappropriate work
-                </option>
-                <option value="Harassing/Trolling">Harassing/Trolling</option>
-                <option value="Linking to inappropriate sites">
-                  Linking to inappropriate sites
-                </option>
-                <option value="Unsuitable content on profile">
-                  Unsuitable content on profile
-                </option>
-                <option value="Reproducing others' work">
-                  Reproducing others' work
-                </option>
-                <option value="Violating others' privacy">
-                  Violating others' privacy
-                </option>
-                <option value="This work depicts child pornography or child abuse">
-                  This work depicts child pornography or child abuse
-                </option>
-                <option value="Indicating intent to commit suicide or a crime">
-                  Indicating intent to commit suicide or a crime
-                </option>
-                <option value="Causing problems on pixiv Encyclopedia">
-                  Causing problems on pixiv Encyclopedia
-                </option>
-                <option value="Other violations of Terms of Use">
-                  Other violations of Terms of Use
-                </option>
-              </select>
-            </div>
-
-            {/* กล่องเขียนเพิ่มเติม */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your detailed report
-              </label>
-              <textarea
-                className="w-full border border-gray-300 rounded-md px-3 py-2 resize-none outline-none focus:ring-2 focus:ring-sky-300"
-                rows={4}
-                value={reportDetail}
-                onChange={(e) => setReportDetail(e.target.value)}
-                placeholder="Optional details"
-              />
-            </div>
-
-            {/* ปุ่ม */}
-            <div className="flex flex-col gap-3 mt-6">
+            <p className="text-center text-gray-600 mb-6">
+              Please sign in to interact with posts and comments.
+            </p>
+            <div className="flex flex-col gap-3">
               <button
                 className="w-full bg-sky-400 hover:bg-sky-500 text-white font-semibold py-2 rounded-full"
-                onClick={submitReport}
+                onClick={() => {
+                  setShowGuestAlert(false);
+                  router.push("/login");
+                }}
               >
-                Send
+                Login
               </button>
               <button
                 className="w-full bg-sky-100 hover:bg-sky-200 text-gray-700 font-semibold py-2 rounded-full"
-                onClick={() => setShowReportModal(false)}
+                onClick={() => setShowGuestAlert(false)}
               >
                 Cancel
               </button>
