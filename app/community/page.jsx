@@ -58,10 +58,22 @@ export default function CommunityFeed() {
         const data = await res.json();
         setPosts(data);
 
-        // กำหนดสถานะ likedPosts เริ่มต้น (ยังไม่ได้กดไลก์)
+        // ตรวจสอบ user id ที่ login เพื่อตั้ง likedPosts
+        let currentUserId = null;
+        try {
+          const meRes = await fetch("/api/auth/me", { credentials: "include" });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            currentUserId = meData?._id;
+          }
+        } catch {}
+
         const initLikes = {};
         data.forEach((p) => {
-          initLikes[p._id] = false;
+          // ถ้ามี user id ใน likes แสดงว่า user นี้กดไลก์แล้ว
+          initLikes[p._id] = currentUserId
+            ? p.likes && Array.isArray(p.likes) && p.likes.includes(currentUserId)
+            : false;
         });
         setLikedPosts(initLikes);
       } catch (err) {
@@ -87,10 +99,13 @@ export default function CommunityFeed() {
     if (checkGuestUser()) return;
 
     try {
-      await fetch(`/api/community/${postId}/like`, {
+      const res = await fetch(`/api/community/${postId}/like`, {
         method: "POST",
         credentials: "include",
       });
+      if (!res.ok) throw new Error("Like failed");
+      // สมมุติ API ส่ง userId ที่กดไลก์กลับมา หรือใช้ user._id
+      const userId = user?._id;
       setLikedPosts((prev) => ({
         ...prev,
         [postId]: !prev[postId],
@@ -100,9 +115,9 @@ export default function CommunityFeed() {
           p._id === postId
             ? {
                 ...p,
-                likes: likedPosts[postId]
-                  ? p.likes.filter((uid) => uid !== "")
-                  : [...p.likes, ""],
+                likes: !likedPosts[postId]
+                  ? [...(p.likes || []), userId]
+                  : (p.likes || []).filter((uid) => uid !== userId),
               }
             : p
         )
@@ -307,7 +322,7 @@ export default function CommunityFeed() {
                             className="flex items-center space-x-1 text-black"
                           >
                             {likedPosts[post._id] ? (
-                              <HeartIconSolid className="w-5 h-5 fill-current" />
+                              <HeartIconSolid className="w-5 h-5 fill-current text-red-500" />
                             ) : (
                               <HeartIconOutline className="w-5 h-5" />
                             )}
@@ -332,7 +347,7 @@ export default function CommunityFeed() {
 
       {/* Report Modal */}
       {showReportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="bg-white rounded-lg shadow-lg w-96 p-6 relative">
             <button
               onClick={() => setShowReportModal(false)}
@@ -411,7 +426,7 @@ export default function CommunityFeed() {
 
       {/* Guest Alert Modal */}
       {showGuestAlert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-2xl w-[90%] max-w-md shadow-xl relative">
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-semibold"
