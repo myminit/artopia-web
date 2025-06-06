@@ -183,7 +183,7 @@ export default function CommunityFeed() {
         </div>
 
         {/* Main Content - ปรับ padding และใช้ max-width */}
-        <main className="ml-56 flex-1 min-h-screen px-8 py-6 bg-white">
+        <main className="ml-56 flex-1 min-h-[calc(100vh-70px)] px-8 py-6 bg-white overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             {/* Header Section - ใช้ Grid Layout เพื่อให้พื้นที่คงที่ */}
             <div className="h-32 mb-8 p-6 bg-gradient-to-r from-sky-50 to-blue-50 rounded-2xl shadow-sm border border-sky-100">
