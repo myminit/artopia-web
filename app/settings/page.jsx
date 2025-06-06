@@ -105,12 +105,12 @@ export default function Settings() {
       {/* Wrapper ด้านล่าง Header */}
       <div className="flex pt-[70px]">
         {/* Sidebar (fixed) */}
-        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-50 bg-sky-400 z-40 shadow">
+        <div className="fixed top-[70px] left-0 h-[calc(100vh-70px)] w-56 bg-sky-400 z-40 shadow">
           <Navbar />
         </div>
 
         <main
-          className="ml-72 flex-1 overflow-y-auto bg-white p-3 flex items-center justify-center"
+          className="ml-56 flex-1 overflow-y-auto bg-white p-3 flex items-center justify-center"
           style={{ minHeight: "calc(100vh - 70px)" }}
         >
           {user === undefined ? (
@@ -300,7 +300,7 @@ export default function Settings() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className={`bg-sky-500 text-white px-12 py-5 rounded-lg hover:bg-sky-600 transition-colors font-medium shadow-md text-lg ${
+                        className={`bg-sky-500 text-white px-6 py-2 rounded-lg hover:bg-sky-600 transition-colors font-medium shadow-md text-base ${
                           loading
                             ? "opacity-50 cursor-not-allowed"
                             : "hover:shadow-lg"
@@ -318,7 +318,7 @@ export default function Settings() {
                           });
                           setMessage({ type: "", text: "" });
                         }}
-                        className="text-gray-600 hover:text-gray-800 px-12 py-5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors font-medium text-lg"
+                        className="text-gray-600 hover:text-gray-800 px-6 py-2 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors font-medium text-base"
                       >
                         Reset
                       </button>
